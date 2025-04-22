@@ -3,12 +3,23 @@ package main
 import(
 	"net"
 	"net/http"
+	"os"
 )
 
 func handleError(err error){
 	if(err!=nil){
 		panic(err.Error());
 	}
+}
+
+var contextPath string;
+
+func init()(){
+	var tmp string = os.Getenv("CONTEXT_PATH");
+	if(tmp == ""){
+		tmp = "/backend";
+	}
+	contextPath = tmp;
 }
 
 func main()(){
@@ -22,11 +33,7 @@ func main()(){
 	//handler
 	handlerMux = http.NewServeMux();
 	//routes
-	handlerMux.HandleFunc("/", func(rw http.ResponseWriter, req *http.Request) {
-		var err2 error;
-		_, err2 = rw.Write([]byte("Hello!\n"));
-		handleError(err2);
-	});
+	handlerMux.HandleFunc("/", http.NotFound);
 	//server
 	err = http.Serve(listener, handlerMux);
 	handleError(err);
