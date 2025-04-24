@@ -29,12 +29,44 @@ var dataBase []Entity = []Entity{
 		Name: "Third",
 		Description: "the third element.",
 	},
+	Entity{
+		Id: 3,
+		Name: "Fourth",
+		Description: "the fourth element.",
+	},
 };
 var mu sync.Mutex = sync.Mutex{};
 
 func GetEntities(rw http.ResponseWriter, req *http.Request)(){
+	var page uint64 = 0;
+	var size uint64 = 2;
+	var err error;
+	query := req.URL.Query();
+	queryPageVal, queryPageOk := query["page"];
+	if(queryPageOk && len(queryPageVal)==1){
+		page, err = strconv.ParseUint(queryPageVal[0], 10, 64);
+		if(err != nil){
+			rw.WriteHeader(http.StatusBadRequest);
+			rw.Write([]byte("page should be numeric"));
+			return;
+		}
+	}
+	querySizeVal, querySizeOk := query["size"];
+	if(querySizeOk && len(querySizeVal)==1){
+		size, err = strconv.ParseUint(querySizeVal[0], 10, 64);
+		if(err != nil){
+			rw.WriteHeader(http.StatusBadRequest);
+			rw.Write([]byte("size should be numeric"));
+			return;
+		}
+	}
+	from := page * size;
+	to := ((page + 1) * size);
+	if(to > uint64(len(dataBase))){
+		to = uint64(len(dataBase));
+	}
 	mu.Lock();
-	jsonByteArr, err := json.Marshal(dataBase)
+	jsonByteArr, err := json.Marshal(dataBase[from:to])
 	mu.Unlock();
 	if(err != nil){
 		rw.WriteHeader(http.StatusInternalServerError);

@@ -57,13 +57,13 @@ func Middleware(next http.HandlerFunc, role string)(http.HandlerFunc){
 		data.Set("token", bearer);
 		data.Set("client_id", privateClientId);
 		data.Set("client_secret", privateClientSecret);
-		req, err := http.NewRequest(http.MethodPost, introspectionEndpoint, strings.NewReader(data.Encode()));
+		kcReq, err := http.NewRequest(http.MethodPost, introspectionEndpoint, strings.NewReader(data.Encode()));
 		if(err != nil){
 			rw.WriteHeader(http.StatusInternalServerError);
 			return;
 		}
-		req.Header.Add("Content-Type", "application/x-www-form-urlencoded");
-		resp, err := httpClient.Do(req);
+		kcReq.Header.Add("Content-Type", "application/x-www-form-urlencoded");
+		resp, err := httpClient.Do(kcReq);
 		if(err != nil){
 			rw.WriteHeader(http.StatusInternalServerError);
 			return;
