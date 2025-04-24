@@ -66,7 +66,8 @@ func GetEntities(rw http.ResponseWriter, req *http.Request)(){
 		to = uint64(len(dataBase));
 	}
 	mu.Lock();
-	jsonByteArr, err := json.Marshal(dataBase[from:to])
+	send := struct{Results any; Count int}{Results: dataBase[from:to], Count: len(dataBase)};
+	jsonByteArr, err := json.Marshal(send);
 	mu.Unlock();
 	if(err != nil){
 		rw.WriteHeader(http.StatusInternalServerError);
