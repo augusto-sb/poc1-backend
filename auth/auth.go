@@ -1,8 +1,6 @@
 package auth
 
 import(
-	"fmt"
-	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -10,6 +8,11 @@ import(
 	"os"
 	"strings"
 )
+
+type IntrospectionResponse = struct{
+	Active bool `json:"active"`
+	ResourceAccess map[string]struct{Roles []string `json:"roles"`} `json:"resource_access"`
+};
 
 var introspectionEndpoint string = "https://example.com/auth/realms/REALM/protocol/openid-connect/token/introspect";
 var privateClientId string = "client";
@@ -41,6 +44,7 @@ func Middleware(next http.HandlerFunc, role string)(http.HandlerFunc){
 		if(strings.HasPrefix(strings.ToLower(bearer), "bearer ")){
 			bearer = bearer[7:len(bearer)];
 		}
+		//some validation
 		jwt := strings.Split(bearer, ".");
 		if(len(jwt) != 3){
 			// header, payload, signature
@@ -74,32 +78,34 @@ func Middleware(next http.HandlerFunc, role string)(http.HandlerFunc){
 			rw.WriteHeader(http.StatusInternalServerError);
 			return;
 		}
-		var respJson struct{active bool};
+		var respJson IntrospectionResponse;
 		err = json.Unmarshal(bodyBytes, &respJson);
 		if(err != nil){
 			rw.WriteHeader(http.StatusInternalServerError);
 			return;
 		}
-		if(!respJson.active){
-			/*rw.WriteHeader(http.StatusUnauthorized);
+		//kc tells if token is active and decodes it (base64 payload) to a json
+		if(!respJson.Active){
+			rw.WriteHeader(http.StatusUnauthorized);
 			rw.Write([]byte("inactive token"));
-			return;*/
-		}
-		//StatusForbidden
-		payload := jwt[1];
-		payloadDecoded, err := base64.RawStdEncoding.DecodeString(payload);
-		if(err != nil){
-			rw.WriteHeader(http.StatusInternalServerError);
-			rw.Write([]byte("error decoding JWT"));
 			return;
 		}
-		var jwtJson map[string]*any;
-		err = json.Unmarshal(payloadDecoded, &jwtJson);
-		if(err != nil){
-			rw.WriteHeader(http.StatusInternalServerError);
+		var hasAccess bool = false;
+		for k, v := range respJson.ResourceAccess{
+			if(k == privateClientId){
+				for _, v2 := range v.Roles{
+					if(v2 == role){
+						hasAccess = true;
+						break;
+					}
+				}
+			}
+		}
+		if(!hasAccess){
+			rw.WriteHeader(http.StatusForbidden);
+			rw.Write([]byte("role required: "+role));
 			return;
 		}
-		fmt.Println(jwtJson);
 		next.ServeHTTP(rw, req);
-	})
+	});
 }
