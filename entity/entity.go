@@ -3,6 +3,7 @@ package entity
 import(
 	"encoding/json"
 	"net/http"
+	"sort"
 	"strconv"
 	"sync"
 )
@@ -40,10 +41,24 @@ var mu sync.Mutex = sync.Mutex{};
 func GetEntities(rw http.ResponseWriter, req *http.Request)(){
 	var page uint64 = 0;
 	var size uint64 = 2;
+	var sortKey string = "";
+	var sortDirection bool = true;
 	var err error;
 	query := req.URL.Query();
+	querySortKeyVal, querySortKeyOk := query["sort.key"];
+	if(querySortKeyOk && len(querySortKeyVal) == 1){
+		if(querySortKeyVal[0] == "Id" || querySortKeyVal[0] == "Name" || querySortKeyVal[0] == "Description"){
+			sortKey = querySortKeyVal[0];
+		}
+	}
+	querySortDirectionVal, querySortDirectionOk := query["sort.direction"];
+	if(querySortDirectionOk && len(querySortDirectionVal) == 1){
+		if(querySortDirectionVal[0] == "false"){
+			sortDirection = false;
+		}
+	}
 	queryPageVal, queryPageOk := query["page"];
-	if(queryPageOk && len(queryPageVal)==1){
+	if(queryPageOk && len(queryPageVal) == 1){
 		page, err = strconv.ParseUint(queryPageVal[0], 10, 64);
 		if(err != nil){
 			rw.WriteHeader(http.StatusBadRequest);
@@ -66,6 +81,31 @@ func GetEntities(rw http.ResponseWriter, req *http.Request)(){
 		to = uint64(len(dataBase));
 	}
 	mu.Lock();
+	if(sortKey != ""){
+		switch sortKey {
+			case "Id":
+				sort.Slice(dataBase, func(i, j int) bool {
+					if(sortDirection){
+						return dataBase[i].Id > dataBase[j].Id;
+					}
+					return dataBase[i].Id < dataBase[j].Id;
+				});
+			case "Name":
+				sort.Slice(dataBase, func(i, j int) bool {
+					if(sortDirection){
+						return dataBase[i].Name > dataBase[j].Name;
+					}
+					return dataBase[i].Name < dataBase[j].Name;
+				});
+			case "Description":
+				sort.Slice(dataBase, func(i, j int) bool {
+					if(sortDirection){
+						return dataBase[i].Description > dataBase[j].Description;
+					}
+					return dataBase[i].Description < dataBase[j].Description;
+				});
+		}
+	}
 	send := struct{Results any; Count int}{Results: dataBase[from:to], Count: len(dataBase)};
 	jsonByteArr, err := json.Marshal(send);
 	mu.Unlock();
