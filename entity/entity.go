@@ -230,6 +230,9 @@ func AddEntity(rw http.ResponseWriter, req *http.Request)(){
 	dataBase = append(dataBase, e);
 	mu.Unlock();
 	rw.WriteHeader(http.StatusCreated);
+	jsonByteArr, err := json.Marshal(e);
+	if(err != nil){return;}
+	rw.Write(jsonByteArr);
 }
 
 func UpdateEntity(rw http.ResponseWriter, req *http.Request)(){
