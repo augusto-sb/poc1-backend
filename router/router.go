@@ -25,7 +25,7 @@ func init()(){
 		corsMiddleware = func(next http.HandlerFunc)(http.HandlerFunc){
 			return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 				rw.Header().Set("Access-Control-Allow-Origin", corsOrigin);
-				rw.Header().Set("Access-Control-Allow-Headers", "authorization");
+				rw.Header().Set("Access-Control-Allow-Headers", "authorization,content-type");
 				rw.Header().Set("Access-Control-Allow-Methods", "GET,DELETE,POST,PUT");
 				next.ServeHTTP(rw, req);
 			});
