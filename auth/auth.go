@@ -63,6 +63,7 @@ func Middleware(next http.HandlerFunc, role string)(http.HandlerFunc){
 			return;
 		}
 		kcReq.Header.Add("Content-Type", "application/x-www-form-urlencoded");
+		kcReq.Host = "localhost:8080";//fake its not a direct request
 		resp, err := httpClient.Do(kcReq);
 		if(err != nil){
 			rw.WriteHeader(http.StatusInternalServerError);
