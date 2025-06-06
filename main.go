@@ -1,7 +1,7 @@
 package main
 
 import (
-	//"fmt"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -17,7 +17,10 @@ func handleError(err error) {
 	}
 }
 
+var version string = "1.0.0"
+
 func main() {
+	fmt.Println("Version: ", version)
 	var err error
 	var listener net.Listener
 	var port string = os.Getenv("PORT")

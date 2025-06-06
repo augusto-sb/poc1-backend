@@ -1,7 +1,8 @@
 FROM docker.io/library/golang:1.22.12-alpine3.21 AS compiler
 WORKDIR /app/
 COPY . .
-RUN go build -o main .
+ARG VERSION=1.0.0
+RUN go build -o main -ldflags "-X main.version=${VERSION}" .
 
 FROM scratch AS runner
 COPY --from=compiler /app/main /main
