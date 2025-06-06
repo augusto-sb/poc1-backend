@@ -1,14 +1,24 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 	"os"
+	"reflect"
+	"runtime"
 
 	"example.com/auth"
 	"example.com/entity"
 )
 
 var Mux *http.ServeMux
+
+func printNextFuncName(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		fmt.Println("invoked: ", runtime.FuncForPC(reflect.ValueOf(next).Pointer()).Name())
+		next.ServeHTTP(rw, req)
+	})
+}
 
 var corsMiddleware func(http.HandlerFunc) http.HandlerFunc = func(next http.HandlerFunc) http.HandlerFunc {
 	return next
@@ -36,11 +46,11 @@ func init() {
 		contextPath = "/backend"
 	}
 	Mux = http.NewServeMux()
-	Mux.HandleFunc("/", http.NotFound)
-	Mux.HandleFunc("OPTIONS /", corsMiddleware(corsHandler))
-	Mux.HandleFunc("GET "+contextPath+"/entities", corsMiddleware(auth.Middleware(entity.GetEntities, "entity-read")))
-	Mux.HandleFunc("GET "+contextPath+"/entities/{id}", corsMiddleware(auth.Middleware(entity.GetEntity, "entity-read")))
-	Mux.HandleFunc("POST "+contextPath+"/entities", corsMiddleware(auth.Middleware(entity.AddEntity, "entity-create")))
-	Mux.HandleFunc("DELETE "+contextPath+"/entities/{id}", corsMiddleware(auth.Middleware(entity.RemoveEntity, "entity-delete")))
-	Mux.HandleFunc("PUT "+contextPath+"/entities/{id}", corsMiddleware(auth.Middleware(entity.UpdateEntity, "entity-update")))
+	Mux.HandleFunc("/", corsMiddleware(printNextFuncName(http.NotFound)))
+	Mux.HandleFunc("OPTIONS /", corsMiddleware(printNextFuncName(corsHandler)))
+	Mux.HandleFunc("GET "+contextPath+"/entities", corsMiddleware(auth.Middleware(printNextFuncName(entity.GetEntities), "entity-read")))
+	Mux.HandleFunc("GET "+contextPath+"/entities/{id}", corsMiddleware(auth.Middleware(printNextFuncName(entity.GetEntity), "entity-read")))
+	Mux.HandleFunc("POST "+contextPath+"/entities", corsMiddleware(auth.Middleware(printNextFuncName(entity.AddEntity), "entity-create")))
+	Mux.HandleFunc("DELETE "+contextPath+"/entities/{id}", corsMiddleware(auth.Middleware(printNextFuncName(entity.RemoveEntity), "entity-delete")))
+	Mux.HandleFunc("PUT "+contextPath+"/entities/{id}", corsMiddleware(auth.Middleware(printNextFuncName(entity.UpdateEntity), "entity-update")))
 }
