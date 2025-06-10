@@ -3,4 +3,5 @@ AUTH_CLIENT_ID="private" \
 AUTH_CLIENT_SECRET="VaSyUQksKSDf1Suv1lLVrmxaRQNaczHW" \
 CORS_ORIGIN="http://localhost:4200" \
 PORT='8081' \
+CONTEXT_PATH='/backend/' \
 go run .

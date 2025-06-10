@@ -38,6 +38,11 @@ func corsHandler(rw http.ResponseWriter, req *http.Request) {
 
 func GlobalMiddleware(rm RouteMap) http.HandlerFunc {
 	fmt.Println(rm)
+	var allowedMethods []string = []string{}
+	for key := range rm {
+		allowedMethods = append(allowedMethods, key)
+	}
+	allowedMethodsStr := strings.Join(allowedMethods, ",")
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		valor, existe := rm[req.Method]
 		if existe {
@@ -45,13 +50,12 @@ func GlobalMiddleware(rm RouteMap) http.HandlerFunc {
 				corsMiddleware(printNextFuncName(valor.hndlr)).ServeHTTP(rw, req)
 			} else {
 				corsMiddleware(auth.Middleware(printNextFuncName(valor.hndlr), valor.authRole)).ServeHTTP(rw, req)
+				/*for c := range chain {
+					...
+				}*/
 			}
 		} else {
-			var allowedMethods []string = []string{}
-			for key := range rm {
-				allowedMethods = append(allowedMethods, key)
-			}
-			rw.Header().Set("Allow", strings.Join(allowedMethods, ","))
+			rw.Header().Set("Allow", allowedMethodsStr)
 			rw.WriteHeader(http.StatusMethodNotAllowed)
 		}
 	})
@@ -70,14 +74,24 @@ func init() {
 		}
 	}
 	var contextPath string
-	contextPath = os.Getenv("CONTEXT_PATH") // standarizar
+	contextPath = os.Getenv("CONTEXT_PATH")
 	if contextPath == "" {
-		contextPath = "/backend"
+		contextPath = "/backend" // default
+	} else {
+		// standarizar
+		parts := strings.Split(contextPath, "/")
+		contextPath = ""
+		for _, p := range parts {
+			if p != "" {
+				contextPath += "/" + p
+			}
+		}
+		fmt.Println("standarized contextPath: '" + contextPath + "'")
 	}
 	Mux = http.NewServeMux()
+	innerMux := http.NewServeMux()
 	//Mux.HandleFunc("OPTIONS /", corsMiddleware(printNextFuncName(corsHandler)))
-	Mux.HandleFunc("/", corsMiddleware(printNextFuncName(http.NotFound)))
-	Mux.HandleFunc(contextPath+"/entities", GlobalMiddleware(RouteMap{
+	innerMux.HandleFunc("/entities", GlobalMiddleware(RouteMap{
 		http.MethodGet: Route{
 			hndlr:    entity.GetEntities,
 			authRole: "entity-read",
@@ -87,7 +101,7 @@ func init() {
 			authRole: "entity-create",
 		},
 	}))
-	Mux.HandleFunc(contextPath+"/entities/{id}", GlobalMiddleware(RouteMap{
+	innerMux.HandleFunc("/entities/{id}", GlobalMiddleware(RouteMap{
 		http.MethodGet: Route{
 			hndlr:    entity.GetEntity,
 			authRole: "entity-read",
@@ -101,4 +115,6 @@ func init() {
 			authRole: "entity-update",
 		},
 	}))
+	Mux.HandleFunc("/", corsMiddleware(printNextFuncName(http.NotFound)))
+	Mux.Handle(contextPath+"/", http.StripPrefix(contextPath, innerMux))
 }
