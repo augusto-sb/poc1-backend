@@ -33,9 +33,9 @@ var corsMiddleware func(http.HandlerFunc) http.HandlerFunc = func(next http.Hand
 }
 
 func corsHandler(rw http.ResponseWriter, req *http.Request) {
-	if req.Method == http.MethodOptions {
+	if(req.Method == http.MethodOptions){
 		rw.WriteHeader(200)
-	} else {
+	}else{
 		http.NotFound(rw, req)
 	}
 }
@@ -64,9 +64,9 @@ func GlobalMiddleware(rm routeMap) http.HandlerFunc {
 	})
 }
 
-func prettyPrintAndMap(sm *http.ServeMux, path string, rm routeMap) {
+func prettyPrintAndMap(sm *http.ServeMux, path string, rm routeMap){
 	for k, _ := range rm {
-		fmt.Println("mapped: " + k + strings.Repeat(" ", 6-len(k)) + " " + path)
+		fmt.Println("mapped: "+	k + strings.Repeat(" ", 6-len(k))+" "+path)
 	}
 	sm.HandleFunc(path, GlobalMiddleware(rm))
 }
@@ -86,6 +86,16 @@ func init() {
 	}
 	//innerMux
 	innerMux := http.NewServeMux()
+	/*innerMux.HandleFunc("/entities", GlobalMiddleware(routeMap{
+		http.MethodGet: route{
+			hndlr:    entity.GetEntities,
+			authRole: "entity-read",
+		},
+		http.MethodPost: route{
+			hndlr:    entity.AddEntity,
+			authRole: "entity-create",
+		},
+	}))*/
 	prettyPrintAndMap(innerMux, "/entities", routeMap{
 		http.MethodGet: route{
 			hndlr:    entity.GetEntities,
@@ -96,7 +106,7 @@ func init() {
 			authRole: "entity-create",
 		},
 	})
-	prettyPrintAndMap(innerMux, "/entities/{id}", routeMap{
+	innerMux.HandleFunc("/entities/{id}", GlobalMiddleware(routeMap{
 		http.MethodGet: route{
 			hndlr:    entity.GetEntity,
 			authRole: "entity-read",
@@ -109,8 +119,15 @@ func init() {
 			hndlr:    entity.UpdateEntity,
 			authRole: "entity-update",
 		},
-	})
+	}))
 	innerMux.HandleFunc("/", corsMiddleware(printNextFuncName(corsHandler)))
+
+	// prettyPrint
+	/*fmt.Println("mapped: GET    /entities")
+	fmt.Println("mapped: POST   /entities")
+	fmt.Println("mapped: GET    /entities/{id}")
+	fmt.Println("mapped: DELETE /entities/{id}")
+	fmt.Println("mapped: PUT    /entities/{id}")*/
 
 	// contextPath
 	contextPath := os.Getenv("CONTEXT_PATH")
@@ -122,12 +139,11 @@ func init() {
 		contextPath = ""
 		for _, p := range parts {
 			if p != "" {
-				contextPath += "/" + p
+				contextPath += "/"+p
 			}
 		}
 		fmt.Println("standarized contextPath: '" + contextPath + "'")
-		Mux = http.NewServeMux()
-		Mux.HandleFunc("/", http.NotFound)
+		Mux := http.NewServeMux()
 		Mux.Handle(contextPath+"/", http.StripPrefix(contextPath, innerMux))
 	}
 }
